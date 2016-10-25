@@ -1,0 +1,22 @@
+<!doctype html>
+
+<base href="/webbs/">
+<meta charset="utf-8">
+<title>webbs</title>
+<link rel="stylesheet" href="styles/docs.css">
+<link rel="icon" href="data:;base64,=">
+
+<body></body>
+
+<nav class="nav-h text-larger">
+  <a href="">webbs</a>
+  <a href="https://github.com/Mitranim/webbs" target="_blank" class="fa fa-github"></a>
+</nav>
+
+<article>
+  {{include('readme.md')}}
+</article>
+
+{% if (!prod) { %}
+<script src="docs.js"></script>
+{% } %}
