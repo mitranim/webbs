@@ -3,11 +3,10 @@
 .DS_Store
 
 # Folders
-node_modules
-dist
+docs
 gh-pages
+node_modules
 test
 
 # Build-related files
-gulpfile.js
-webpack.config.js
+/*.js
