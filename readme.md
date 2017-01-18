@@ -2,18 +2,18 @@
 
 * [Overview](#overview)
 * [Installation](#installation)
-* [Ws](#wsurl-protocol)
-  * [`open`](#wsopen)
-  * [`close`](#wsclose)
-  * [`send`](#wssendmessage)
-  * [`sendJSON`](#wssendjsonmessage)
-  * [`nativeWs`](#wsnativews)
-  * [`url`](#wsurl)
-  * [`protocol`](#wsprotocol)
-  * [`onopen`](#wsonopen)
-  * [`onclose`](#wsonclose)
-  * [`onerror`](#wsonerror)
-  * [`onmessage`](#wsonmessage)
+* [Wsocket](#wsocketurl-protocol)
+  * [`open`](#wsocketopen)
+  * [`close`](#wsocketclose)
+  * [`send`](#wsocketsendmessage)
+  * [`sendJSON`](#wsocketsendjsonmessage)
+  * [`nativeWsocket`](#wsocketnativewsocket)
+  * [`url`](#wsocketurl)
+  * [`protocol`](#wsocketprotocol)
+  * [`onopen`](#wsocketonopen)
+  * [`onclose`](#wsocketonclose)
+  * [`onerror`](#wsocketonerror)
+  * [`onmessage`](#wsocketonmessage)
 * [Misc](#misc)
 
 ## Overview
@@ -44,128 +44,133 @@ npm i --save-dev webbs
 Then import:
 
 ```js
-const {Ws} = require('webbs')
+const {Wsocket} = require('webbs')
 ```
 
-## `Ws(url, [protocol])`
+## `Wsocket(url, [protocol])`
 
 Takes the same arguments as the native `WebSocket` constructor. Returns an
 object that pretends to be a `WebSocket`. Starts inert; call `.open()` to
 connect.
 
-All `Ws` methods are asynchronous unless stated otherwise.
+All `Wsocket` methods are asynchronous unless stated otherwise.
 
 ```js
-const {Ws} = require('webbs')
+const {Wsocket} = require('webbs')
 
-const ws = Ws('ws://my-host:my-port', 'optional-my-protocol')
+const wsocket = Wsocket('ws://my-host:my-port', 'optional-my-protocol')
 
-ws.onopen = ws.onclose = ws.onerror = ws.onmessage = function report (event) {
+wsocket.onopen =
+wsocket.onclose =
+wsocket.onerror =
+wsocket.onmessage =
+function report (event) {
   console.info('Something happened:', event)
 }
 
-ws.open()
+wsocket.open()
 ```
 
-### `Ws.open()`
+### `wsocket.open()`
 
-Opens or reopens a connection with the current `ws.url` and `ws.protocol`. Has
-no effect if already connected.
+Opens or reopens a connection with the current `wsocket.url` and
+`wsocket.protocol`. Has no effect if already connected.
 
 ```js
-const ws = Ws('ws://my-host:my-port', 'optional-my-protocol')
-ws.open()
+const wsocket = Wsocket('ws://my-host:my-port', 'optional-my-protocol')
+wsocket.open()
 ```
 
-### `Ws.close()`
+### `wsocket.close()`
 
 Closes the active connection, if any. Stops reconnecting if a reconnect was in
 progress. Can be reopened later.
 
 ```js
-ws.close()
+wsocket.close()
 // some time later
-ws.open()
+wsocket.open()
 ```
 
-### `Ws.send(message)`
+### `wsocket.send(message)`
 
 Sends `message` as-is over the websocket, if any. The message should belong to
 one of the types accepted by `WebSocket.send` (string, binary, or blob).
 
-If inactive, adds `message` to `ws.sendBuffer`. When online, sends all buffered
-messages at once.
+If inactive, adds `message` to `wsocket.sendBuffer`. When active, will send all
+buffered messages at once.
 
 ```js
-const ws = Ws('ws://my-host:my-port')
+const wsocket = Wsocket('ws://my-host:my-port')
 
 // These get buffered
-ws.send('my msg')
-ws.send(new Blob([1,2,3]))
+wsocket.send('my msg')
+wsocket.send(new Blob([1, 2, 3]))
 
 // If this succeeds, the messages will be automatically sent
-ws.open()
+wsocket.open()
 ```
 
-### `Ws.sendJSON(message)`
+### `wsocket.sendJSON(message)`
 
-Same as `ws.send(JSON.stringify(message))`. May produce a synchronous exception
-if `message` is not encodable. Feel free to override this with a custom function.
+Same as `wsocket.send(JSON.stringify(message))`. May produce a synchronous
+exception if `message` is not encodable. Feel free to override this with a
+custom function.
 
-### `Ws.nativeWs`
+### `wsocket.nativeWsocket`
 
 If active, holds the native websocket. Otherwise `null`.
 
-### `Ws.url`
+### `wsocket.url`
 
 The `url` passed to the `Ws` constructor. May be reassigned later.
 
-### `Ws.protocol`
+### `wsocket.protocol`
 
 The `protocol` passed to the `Ws` constructor. May be reassigned later.
 
-### `Ws.onopen`
+### `wsocket.onopen`
 
 Initially `null`; you can assign a function. Gets called whenever an underlying
 native websocket successfully connects. May happen multiple times.
 
 ```js
-ws.onopen = function report (event) {
+wsocket.onopen = function report (event) {
   console.info('Socket reconnected:', event)
 }
 ```
 
-### `Ws.onclose`
+### `wsocket.onclose`
 
 Initially `null`; you can assign a function. Gets called whenever an underlying
 native websocket closes. May happen multiple times. _Does not_ get called upon
-`ws.close()`.
+`wsocket.close()`.
 
 ```js
-ws.onclose = function report (event) {
+wsocket.onclose = function report (event) {
   console.warn('Socket disconnected:', event)
 }
 ```
 
-### `Ws.onerror`
+### `wsocket.onerror`
 
 Initially `null`; you can assign a function. Gets called whenever an underlying
 native websocket fails to connect or loses an active connection. May happen
 multiple times.
 
 ```js
-ws.onerror = function report (event) {
+wsocket.onerror = function report (event) {
   console.warn('Socket error:', event)
 }
 ```
 
-### `Ws.onmessage`
+### `wsocket.onmessage`
 
 Initially `null`; you can assign a function. Gets called whenever an underlying
 native websocket receives a message.
 
 ```js
-ws.onmessage = function report (event) {
+wsocket.onmessage = function report (event) {
   console.info('Socket message:', event)
 }
 ```

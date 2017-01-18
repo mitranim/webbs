@@ -4,34 +4,34 @@ module.hot.accept(err => {
 
 module.hot.dispose(() => {
   console.clear()
-  if (ws) ws.close()
+  if (wsocket) wsocket.close()
 })
 
 /**
  * Mock
  */
 
-const {Ws} = require('webbs')
+const {Wsocket} = require('webbs')
 
-const ws = window.ws = Ws('ws://localhost:7687')
+const wsocket = window.wsocket = Wsocket('ws://localhost:7687')
 
-ws.onopen = function onopen (event) {
+wsocket.onopen = function onopen (event) {
   console.info('-- socket connected:', event)
 }
 
-ws.onclose = function onclose (event) {
+wsocket.onclose = function onclose (event) {
   console.warn('-- socket connection lost:', event)
 }
 
-ws.onerror = function onerror (event) {
+wsocket.onerror = function onerror (event) {
   console.error(event)
 }
 
-ws.onmessage = function onmessage ({data}) {
+wsocket.onmessage = function onmessage ({data}) {
   console.info('-- socket message:', data)
 }
 
-ws.open()
+wsocket.open()
 
 /**
  * Debug

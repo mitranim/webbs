@@ -20,7 +20,7 @@ function idAttr (idValue) {
   return idValue ? ` id="${idValue}"` : ''
 }
 
-// Roughly translated from kramdown for compatibility with GitHub readme.
+// Translated from kramdown for compatibility with GitHub readme.
 function genId (text) {
   return text
     .trim()
