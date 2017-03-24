@@ -1,3 +1,5 @@
+@import url(https://fonts.googleapis.com/css?family=Open+Sans:400,400i,600,600i&subset=latin-ext);
+
 /**
  * Vars
  */
@@ -10,7 +12,8 @@ $color-twitter: #55acee;  // verified
 
 $sf-font-weight: 300;
 
-$sf-rem: 14pt;
+$sf-rem: 16px;
+$sf-font-family-sans-serif: 'Open Sans', 'Helvetica Neue', Roboto, 'Segoe UI', Verdana, sans-serif;
 
 /**
  * Imports
@@ -24,7 +27,7 @@ $sf-rem: 14pt;
 @import './node_modules/font-awesome/scss/core';
 
 /**
- * Font
+ * Icons
  */
 
 .fa-arrow-up::before      {content: $fa-var-arrow-up}
@@ -42,6 +45,18 @@ $sf-rem: 14pt;
 .fa.inline {
   margin-right: $sf-space / 2;
   &:last-child {margin-right: 0}
+}
+
+/**
+ * Misc
+ */
+
+html {
+  font-family: $sf-font-family-sans-serif;
+  font-weight: $sf-font-weight;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 // wtf

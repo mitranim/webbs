@@ -1,75 +1,98 @@
 'use strict'
 
-const {call, slice, includes, isFunction, isString, validate} = require('fpx')
-const {isImplementation, assign, bindAll, pull} = require('espo')
+const {slice, reduce} = Array.prototype
+const {isFrozen} = Object
 
 /**
- * Wsocket
+ * Webbs
  */
 
-exports.Wsocket = Wsocket
-function Wsocket (url, protocol) {
-  if (!isImplementation(Wsocket.prototype, this)) return new Wsocket(url, protocol)
-  validate(isString, url)
-  bindAll(this)
-  this.url = url
-  this.protocol = protocol
-  this.que = TaskQueAsync()
-  this.nativeWsocket = null
-  this.sendBuffer = []
-  this.reconnectTimer = null
-  this.reconnectAttempts = 0
-  this.maxReconnectInterval = 1000 * 60
-  this.onopen = null
-  this.onclose = null
-  this.onerror = null
-  this.onmessage = null
-}
+export class Webbs {
+  constructor (url, protocol) {
+    validate(isString, url)
 
-assign(Wsocket.prototype, {
+    if (this.constructor === Webbs) bindAll(this)
+
+    this.url = url
+
+    // WebSocket(url, undefined)  ->  ok
+    // WebSocket(url, null)       ->  connection error
+    this.protocol = protocol
+
+    this.que = new TaskQueAsync()
+    this.nativeWS = null
+    this.sendBuffer = []
+    this.reconnectTimer = null
+    this.reconnectAttempts = 0
+    this.maxReconnectInterval = 1000 * 60
+    this.onopen = null
+    this.onclose = null
+    this.onerror = null
+    this.onmessage = null
+  }
+
   open () {
-    wsocketEnque.call(this, wsocketOpen)
-  },
+    webbsEnque.call(this, webbsOpen)
+  }
+
   close () {
-    wsocketEnque.call(this, wsocketClose)
-  },
+    webbsEnque.call(this, webbsClose)
+  }
+
   send (msg) {
-    wsocketEnque.call(this, wsocketSend, msg)
-  },
+    webbsEnque.call(this, webbsSend, msg)
+  }
+
   sendJSON (msg) {
     this.send(JSON.stringify(msg))
-  },
+  }
+
   calcReconnectInterval () {
     return Math.min(1000 * Math.pow(2, this.reconnectAttempts), this.maxReconnectInterval)
-  },
-})
+  }
 
-// Wsocket private methods
-
-function wsocketEnque (task) {
-  return this.que.push(task.bind(this, ...slice(arguments, 1)))
+  deconstructor () {
+    if (this.nativeWS) wsDeconstruct.call(this.nativeWS)
+    this.que.clear()
+    this.constructor(this.url, this.protocol)
+    this.url = null
+    this.protocol = undefined
+  }
 }
 
-function wsocketOpen () {
-  if (!isNativeWsocketActive(this.nativeWsocket)) {
-    if (this.nativeWsocket) wsocketClearNativeWs.call(this)
-    this.nativeWsocket = assign(new WebSocket(this.url, this.protocol), {
-      wsocket: this, onopen, onclose, onerror, onmessage
+exports.Webbs = Webbs
+
+// Webbs privates
+
+function webbsEnque (task) {
+  validate(isFunction, task)
+  return this.que.push(task.bind(this, ...slice.call(arguments, 1)))
+}
+
+function webbsOpen () {
+  if (!isNativeWSActive(this.nativeWS)) {
+    if (this.nativeWS) webbsClearNativeWs.call(this)
+    this.nativeWS = assign(new WebSocket(this.url, this.protocol), {
+      webbs: this,
+      onopen: wsOnOpen,
+      onclose: wsOnClose,
+      onerror: wsOnError,
+      onmessage: wsOnMessage,
     })
   }
 }
 
-function wsocketClose () {
-  wsocketClearNativeWs.call(this)
-  wsocketClearReconnect.call(this)
+function webbsClose () {
+  webbsClearNativeWs.call(this)
+  webbsClearReconnect.call(this)
 }
 
-function wsocketSend (msg) {
+function webbsSend (msg) {
   this.sendBuffer.push(msg)
-  if (isNativeWsocketOpen(this.nativeWsocket)) wsocketFlushSendBuffer.call(this)
+  if (isNativeWSOpen(this.nativeWS)) webbsFlushSendBuffer.call(this)
 }
 
-function wsocketReconnect () {
+function webbsReconnect () {
   if (!this.reconnectTimer) {
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
@@ -79,152 +102,205 @@ function wsocketReconnect () {
   }
 }
 
-function wsocketFlushSendBuffer () {
-  while (this.nativeWsocket && this.sendBuffer.length) {
-    this.nativeWsocket.send(this.sendBuffer.shift())
+function webbsFlushSendBuffer () {
+  while (this.nativeWS && this.sendBuffer.length) {
+    this.nativeWS.send(this.sendBuffer.shift())
   }
 }
 
-function wsocketClearNativeWs () {
-  if (this.nativeWsocket) {
-    this.nativeWsocket.onclose = null
-    this.nativeWsocket.close()
-    this.nativeWsocket = null
+function webbsClearNativeWs () {
+  if (this.nativeWS) {
+    this.nativeWS.onclose = null
+    this.nativeWS.close()
+    this.nativeWS = null
   }
 }
 
-function wsocketClearReconnect () {
+function webbsClearReconnect () {
   clearTimeout(this.reconnectTimer)
   this.reconnectTimer = null
   this.reconnectAttempts = 0
 }
 
-// WebSocket listeners
+// WebSocket addons and privates
 
-function onopen (event) {
+function wsOnOpen (event) {
   validateSocketPair(this)
-  wsocketClearReconnect.call(this.wsocket)
+  webbsClearReconnect.call(this.webbs)
   try {
-    if (isFunction(this.wsocket.onopen)) this.wsocket.onopen(event)
+    if (isFunction(this.webbs.onopen)) this.webbs.onopen(event)
   } finally {
-    wsocketFlushSendBuffer.call(this.wsocket)
+    webbsFlushSendBuffer.call(this.webbs)
   }
 }
 
-function onclose (event) {
+function wsOnClose (event) {
   validateSocketPair(this)
   try {
-    if (isFunction(this.wsocket.onclose)) this.wsocket.onclose(event)
+    if (isFunction(this.webbs.onclose)) this.webbs.onclose(event)
   } finally {
-    wsocketClearNativeWs.call(this.wsocket)
-    wsocketEnque.call(this.wsocket, wsocketReconnect)
+    webbsClearNativeWs.call(this.webbs)
+    webbsEnque.call(this.webbs, webbsReconnect)
   }
 }
 
 // This fires:
-// when native WS closes (nativeWsocket.readyState === nativeWsocket.CLOSED)
-// when native WS starts reconnecting (nativeWsocket.readyState === nativeWsocket.CONNECTING)
-function onerror (event) {
+// when native WS closes (nativeWS.readyState === nativeWS.CLOSED)
+// when native WS starts reconnecting (nativeWS.readyState === nativeWS.CONNECTING)
+function wsOnError (event) {
   validateSocketPair(this)
-  if (isFunction(this.wsocket.onerror)) this.wsocket.onerror(event)
+  if (isFunction(this.webbs.onerror)) this.webbs.onerror(event)
 }
 
-function onmessage (event) {
+function wsOnMessage (event) {
   validateSocketPair(this)
-  if (isFunction(this.wsocket.onmessage)) this.wsocket.onmessage(event)
+  if (isFunction(this.webbs.onmessage)) this.webbs.onmessage(event)
+}
+
+function wsDeconstruct () {
+  this.webbs = this.onopen = this.onclose = this.onerror = this.onmessage = null
+  const {readyState, CLOSED, CLOSING} = this
+  if (readyState !== CLOSED && readyState !== CLOSING) this.close()
 }
 
 /**
  * QueAsync
  */
 
-const IDLE     = 'IDLE'
-const DAMMED   = 'DAMMED'
-const FLUSHING = 'FLUSHING'
+class QueAsync {
+  constructor (deque) {
+    validate(isFunction, deque)
+    if (this.constructor === QueAsync) bindAll(this)
+    this.deque = deque
+    this.state = this.states.IDLE
+    this.flushTimer = null
+    this.pending = []
+  }
 
-function QueAsync (deque) {
-  if (!isImplementation(QueAsync.prototype, this)) return new QueAsync()
-  validate(isFunction, deque)
-  bindAll(this)
-  this.deque = deque
-  this.state = IDLE
-  this.flushTimer = null
-  this.pending = []
-}
-
-assign(QueAsync.prototype, {
-  states: {
-    IDLE,
-    DAMMED,
-    FLUSHING,
-  },
   dam () {
-    if (this.state === IDLE) this.state = DAMMED
-  },
+    if (this.state === this.states.IDLE) this.state = this.states.DAMMED
+  }
+
   push (value) {
     this.pending.push(value)
-    if (this.state === IDLE) this.flush()
-    return this.pull.bind(this, value)
-  },
-  pull (value) {
-    return includes(this.pending, value) && (pull(this.pending, value), true)
-  },
+    if (this.state === this.states.IDLE) this.flush()
+    // return this.pull.bind(this, value)
+  }
+
+  // pull (value) {
+  //   return includes(this.pending, value) && (pull(this.pending, value), true)
+  // }
+
   flush () {
-    if (this.state === FLUSHING) return
-    this.state = FLUSHING
-    this.flushTimer = setTimeout(this.flushNext)
-  },
+    if (this.state === this.states.FLUSHING) return
+    this.state = this.states.FLUSHING
+    this.flushTimer = setTimeout(this._flushNext)
+  }
+
   isEmpty () {
     return !this.pending.length
-  },
-  flushNext () {
-    this.flushTimer = null
-    try {
-      if (this.pending.length) this.deque(this.pending.shift())
-    } finally {
-      if (this.pending.length) this.flushTimer = setTimeout(this.flushNext)
-      else this.state = IDLE
-    }
-  },
+  }
+
   clear () {
     clearTimeout(this.flushTimer)
     this.flushTimer = null
     this.pending.splice(0)
-    this.state = IDLE
-  },
-})
+    this.state = this.states.IDLE
+  }
+
+  _flushNext () {
+    this.flushTimer = null
+    try {
+      if (this.pending.length) this.deque(this.pending.shift())
+    } finally {
+      if (this.pending.length) this.flushTimer = setTimeout(this._flushNext)
+      else this.state = this.states.IDLE
+    }
+  }
+}
+
+QueAsync.prototype.states = {
+  IDLE: 'IDLE',
+  DAMMED: 'DAMMED',
+  FLUSHING: 'FLUSHING',
+}
 
 /**
  * TaskQueAsync
  */
 
-function TaskQueAsync () {
-  if (!isImplementation(TaskQueAsync.prototype, this)) return new TaskQueAsync()
-  QueAsync.call(this, call)
-}
+class TaskQueAsync extends QueAsync {
+  constructor () {
+    super(call)
+    if (this.constructor === TaskQueAsync) bindAll(this)
+  }
 
-assign(TaskQueAsync.prototype, QueAsync.prototype, {
   push (fun) {
-    return QueAsync.prototype.push.call(this, fun.bind(this, ...slice(arguments, 1)))
-  },
-})
+    validate(isFunction, fun)
+    return super.push(fun.bind(this, ...slice.call(arguments, 1)))
+  }
+}
 
 /**
  * Utils
  */
 
-function isNativeWsocketOpen (nativeWsocket) {
-  return nativeWsocket && nativeWsocket.readyState === nativeWsocket.OPEN
+function isNativeWSOpen (nativeWS) {
+  return nativeWS && nativeWS.readyState === nativeWS.OPEN
 }
 
-function isNativeWsocketActive (nativeWsocket) {
-  return nativeWsocket && (
-    isNativeWsocketOpen(nativeWsocket) || nativeWsocket.readyState === nativeWsocket.CONNECTING
+function isNativeWSActive (nativeWS) {
+  return nativeWS && (
+    isNativeWSOpen(nativeWS) || nativeWS.readyState === nativeWS.CONNECTING
   )
 }
 
-function validateSocketPair (nativeWsocket) {
-  if (nativeWsocket.wsocket.nativeWsocket !== nativeWsocket) {
-    throw Error('Unexpected unpairing of native and synthetic sockets')
+function validateSocketPair (nativeWS) {
+  if (nativeWS.webbs.nativeWS !== nativeWS) {
+    throw Error('Expected paired instances of WebSocket and Webbs')
   }
+}
+
+function bindAll (object) {
+  for (const key in object) {
+    const value = object[key]
+    if (isFunction(value)) object[key] = value.bind(object)
+  }
+  return object
+}
+
+function assign () {
+  return reduce.call(arguments, assignOne)
+}
+
+function isMutable (value) {
+  return typeof value === 'object' && value != null && !isFrozen(value)
+}
+
+function assignOne (object, src) {
+  validate(isMutable, object)
+  if (src) for (const key in src) object[key] = src[key]
+  return object
+}
+
+// function pull (list, value) {
+//   const index = list.indexOf(value)
+//   if (~index) list.splice(index, 1)
+//   return list
+// }
+
+function call (fun, value) {
+  return fun(value)
+}
+
+function isString (value) {
+  return typeof value === 'string'
+}
+
+function isFunction (value) {
+  return typeof value === 'function'
+}
+
+function validate (test, value) {
+  if (!test(value)) throw Error(`Expected ${value} to satisfy test ${test.name}`)
 }

@@ -1,6 +1,6 @@
 {
   "name": "webbs",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Thin WebSocket adapter with auto-reconnect and offline buffering",
   "main": "dist/webbs.js",
   "scripts": {
@@ -18,12 +18,10 @@
   "keywords": [
     "websocket",
     "WS",
-    "browser"
+    "browser",
+    "reconnect",
+    "buffering"
   ],
-  "peerDependencies": {
-    "fpx": "0.0.17",
-    "espo": "0.0.3"
-  },
   "devDependencies": {
     "babel-core": "6.21.0",
     "babel-eslint": "7.1.1",
@@ -32,6 +30,7 @@
     "babel-plugin-transform-es2015-arrow-functions": "6.8.0",
     "babel-plugin-transform-es2015-block-scoped-functions": "6.8.0",
     "babel-plugin-transform-es2015-block-scoping": "6.21.0",
+    "babel-plugin-transform-es2015-classes": "6.23.0",
     "babel-plugin-transform-es2015-destructuring": "6.19.0",
     "babel-plugin-transform-es2015-function-name": "6.9.0",
     "babel-plugin-transform-es2015-literals": "6.8.0",
@@ -45,6 +44,7 @@
     "del": "2.2.2",
     "eslint_d": "4.2.1",
     "font-awesome": "4.7.0",
+    "fpx": "0.0.20",
     "gulp": "gulpjs/gulp#4.0",
     "gulp-autoprefixer": "3.1.1",
     "gulp-babel": "6.1.2",

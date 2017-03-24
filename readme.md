@@ -2,18 +2,18 @@
 
 * [Overview](#overview)
 * [Installation](#installation)
-* [Wsocket](#wsocketurl-protocol)
-  * [`open`](#wsocketopen)
-  * [`close`](#wsocketclose)
-  * [`send`](#wsocketsendmessage)
-  * [`sendJSON`](#wsocketsendjsonmessage)
-  * [`nativeWsocket`](#wsocketnativewsocket)
-  * [`url`](#wsocketurl)
-  * [`protocol`](#wsocketprotocol)
-  * [`onopen`](#wsocketonopen)
-  * [`onclose`](#wsocketonclose)
-  * [`onerror`](#wsocketonerror)
-  * [`onmessage`](#wsocketonmessage)
+* [Webbs](#webbsurl-protocol)
+  * [`open`](#webbsopen)
+  * [`close`](#webbsclose)
+  * [`send`](#webbssendmessage)
+  * [`sendJSON`](#webbssendjsonmessage)
+  * [`nativeWS`](#webbsnativews)
+  * [`url`](#webbsurl)
+  * [`protocol`](#webbsprotocol)
+  * [`onopen`](#webbsonopen)
+  * [`onclose`](#webbsonclose)
+  * [`onerror`](#webbsonerror)
+  * [`onmessage`](#webbsonmessage)
 * [Misc](#misc)
 
 ## Overview
@@ -44,133 +44,133 @@ npm i --save-dev webbs
 Then import:
 
 ```js
-const {Wsocket} = require('webbs')
+const {Webbs} = require('webbs')
 ```
 
-## `Wsocket(url, [protocol])`
+## `Webbs(url, [protocol])`
 
 Takes the same arguments as the native `WebSocket` constructor. Returns an
 object that pretends to be a `WebSocket`. Starts inert; call `.open()` to
 connect.
 
-All `Wsocket` methods are asynchronous unless stated otherwise.
+All `Webbs` methods are asynchronous unless stated otherwise.
 
 ```js
-const {Wsocket} = require('webbs')
+const {Webbs} = require('webbs')
 
-const wsocket = Wsocket('ws://my-host:my-port', 'optional-my-protocol')
+const webbs = new Webbs('ws://my-host:my-port', 'optional-my-protocol')
 
-wsocket.onopen =
-wsocket.onclose =
-wsocket.onerror =
-wsocket.onmessage =
+webbs.onopen =
+webbs.onclose =
+webbs.onerror =
+webbs.onmessage =
 function report (event) {
   console.info('Something happened:', event)
 }
 
-wsocket.open()
+webbs.open()
 ```
 
-### `wsocket.open()`
+### `webbs.open()`
 
-Opens or reopens a connection with the current `wsocket.url` and
-`wsocket.protocol`. Has no effect if already connected.
+Opens or reopens a connection with the current `webbs.url` and
+`webbs.protocol`. Has no effect if already connected.
 
 ```js
-const wsocket = Wsocket('ws://my-host:my-port', 'optional-my-protocol')
-wsocket.open()
+const webbs = new Webbs('ws://my-host:my-port', 'optional-my-protocol')
+webbs.open()
 ```
 
-### `wsocket.close()`
+### `webbs.close()`
 
 Closes the active connection, if any. Stops reconnecting if a reconnect was in
 progress. Can be reopened later.
 
 ```js
-wsocket.close()
+webbs.close()
 // some time later
-wsocket.open()
+webbs.open()
 ```
 
-### `wsocket.send(message)`
+### `webbs.send(message)`
 
 Sends `message` as-is over the websocket, if any. The message should belong to
 one of the types accepted by `WebSocket.send` (string, binary, or blob).
 
-If inactive, adds `message` to `wsocket.sendBuffer`. When active, will send all
-buffered messages at once.
+If not connected, adds `message` to `webbs.sendBuffer`. When active, will send
+all buffered messages at once.
 
 ```js
-const wsocket = Wsocket('ws://my-host:my-port')
+const webbs = new Webbs('ws://my-host:my-port')
 
 // These get buffered
-wsocket.send('my msg')
-wsocket.send(new Blob([1, 2, 3]))
+webbs.send('my msg')
+webbs.send(new Blob([1, 2, 3]))
 
 // If this succeeds, the messages will be automatically sent
-wsocket.open()
+webbs.open()
 ```
 
-### `wsocket.sendJSON(message)`
+### `webbs.sendJSON(message)`
 
-Same as `wsocket.send(JSON.stringify(message))`. May produce a synchronous
+Same as `webbs.send(JSON.stringify(message))`. May produce a synchronous
 exception if `message` is not encodable. Feel free to override this with a
 custom function.
 
-### `wsocket.nativeWsocket`
+### `webbs.nativeWS`
 
-If active, holds the native websocket. Otherwise `null`.
+When connected, holds the native websocket. Otherwise `null`.
 
-### `wsocket.url`
+### `webbs.url`
 
-The `url` passed to the `Ws` constructor. May be reassigned later.
+The `url` passed to the `Webbs` constructor. May be reassigned later.
 
-### `wsocket.protocol`
+### `webbs.protocol`
 
-The `protocol` passed to the `Ws` constructor. May be reassigned later.
+The `protocol` passed to the `Webbs` constructor. May be reassigned later.
 
-### `wsocket.onopen`
+### `webbs.onopen`
 
 Initially `null`; you can assign a function. Gets called whenever an underlying
 native websocket successfully connects. May happen multiple times.
 
 ```js
-wsocket.onopen = function report (event) {
+webbs.onopen = function report (event) {
   console.info('Socket reconnected:', event)
 }
 ```
 
-### `wsocket.onclose`
+### `webbs.onclose`
 
 Initially `null`; you can assign a function. Gets called whenever an underlying
 native websocket closes. May happen multiple times. _Does not_ get called upon
-`wsocket.close()`.
+`webbs.close()`.
 
 ```js
-wsocket.onclose = function report (event) {
+webbs.onclose = function report (event) {
   console.warn('Socket disconnected:', event)
 }
 ```
 
-### `wsocket.onerror`
+### `webbs.onerror`
 
 Initially `null`; you can assign a function. Gets called whenever an underlying
 native websocket fails to connect or loses an active connection. May happen
 multiple times.
 
 ```js
-wsocket.onerror = function report (event) {
+webbs.onerror = function report (event) {
   console.warn('Socket error:', event)
 }
 ```
 
-### `wsocket.onmessage`
+### `webbs.onmessage`
 
 Initially `null`; you can assign a function. Gets called whenever an underlying
 native websocket receives a message.
 
 ```js
-wsocket.onmessage = function report (event) {
+webbs.onmessage = function report (event) {
   console.info('Socket message:', event)
 }
 ```
