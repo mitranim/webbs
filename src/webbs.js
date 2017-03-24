@@ -60,8 +60,6 @@ export class Webbs {
   }
 }
 
-exports.Webbs = Webbs
-
 // Webbs privates
 
 function webbsEnque (task) {
