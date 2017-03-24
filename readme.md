@@ -47,11 +47,11 @@ Then import:
 const {Webbs} = require('webbs')
 ```
 
-## `Webbs(url, [protocol])`
+## `Webbs(url, protocol)`
 
-Takes the same arguments as the native `WebSocket` constructor. Returns an
-object that pretends to be a `WebSocket`. Starts inert; call `.open()` to
-connect.
+Takes the same arguments as the native `WebSocket` constructor (`protocol` is
+optional). Returns an object that pretends to be a `WebSocket`. Starts inert;
+call `.open()` to connect.
 
 All `Webbs` methods are asynchronous unless stated otherwise.
 
