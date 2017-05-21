@@ -7,13 +7,14 @@
   * [`close`](#webbsclose)
   * [`send`](#webbssendmessage)
   * [`sendJSON`](#webbssendjsonmessage)
-  * [`nativeWS`](#webbsnativews)
   * [`url`](#webbsurl)
   * [`protocol`](#webbsprotocol)
-  * [`onopen`](#webbsonopen)
-  * [`onclose`](#webbsonclose)
-  * [`onerror`](#webbsonerror)
-  * [`onmessage`](#webbsonmessage)
+  * [`nativeWS`](#webbsnativews)
+  * [`onEachOpen`](#webbsoneachopen)
+  * [`onEachClose`](#webbsoneachclose)
+  * [`onEachError`](#webbsoneacherror)
+  * [`onEachMessage`](#webbsoneachmessage)
+  * [`deinit`](#webbsdeinit)
 * [Misc](#misc)
 
 ## Overview
@@ -50,8 +51,7 @@ const {Webbs} = require('webbs')
 ## `Webbs(url, protocol)`
 
 Takes the same arguments as the native `WebSocket` constructor (`protocol` is
-optional). Returns an object that pretends to be a `WebSocket`. Starts inert;
-call `.open()` to connect.
+optional). Starts inert; call `.open()` to connect.
 
 All `Webbs` methods are asynchronous unless stated otherwise.
 
@@ -60,10 +60,10 @@ const {Webbs} = require('webbs')
 
 const webbs = new Webbs('ws://my-host:my-port', 'optional-my-protocol')
 
-webbs.onopen =
-webbs.onclose =
-webbs.onerror =
-webbs.onmessage =
+webbs.onEachOpen =
+webbs.onEachClose =
+webbs.onEachError =
+webbs.onEachMessage =
 function report (event) {
   console.info('Something happened:', event)
 }
@@ -97,8 +97,8 @@ webbs.open()
 Sends `message` as-is over the websocket, if any. The message should belong to
 one of the types accepted by `WebSocket.send` (string, binary, or blob).
 
-If not connected, adds `message` to `webbs.sendBuffer`. When active, will send
-all buffered messages at once.
+If not connected, adds `message` to `webbs.sendBuffer`. When connected, will
+send all buffered messages at once.
 
 ```js
 const webbs = new Webbs('ws://my-host:my-port')
@@ -117,10 +117,6 @@ Same as `webbs.send(JSON.stringify(message))`. May produce a synchronous
 exception if `message` is not encodable. Feel free to override this with a
 custom function.
 
-### `webbs.nativeWS`
-
-When connected, holds the native websocket. Otherwise `null`.
-
 ### `webbs.url`
 
 The `url` passed to the `Webbs` constructor. May be reassigned later.
@@ -129,60 +125,64 @@ The `url` passed to the `Webbs` constructor. May be reassigned later.
 
 The `protocol` passed to the `Webbs` constructor. May be reassigned later.
 
-### `webbs.onopen`
+### `webbs.nativeWS`
+
+When connected, holds the native websocket. Otherwise `null`.
+
+### `webbs.onEachOpen`
 
 Initially `null`; you can assign a function. Gets called whenever an underlying
 native websocket successfully connects. May happen multiple times.
 
 ```js
-webbs.onopen = function report (event) {
+webbs.onEachOpen = function report (event) {
   console.info('Socket reconnected:', event)
 }
 ```
 
-### `webbs.onclose`
+### `webbs.onEachClose`
 
 Initially `null`; you can assign a function. Gets called whenever an underlying
-native websocket closes. May happen multiple times. _Does not_ get called upon
-`webbs.close()`.
+native websocket closes. May happen multiple times.
+
+Counter-intuitively, this doesn't have symmetry with `.onEachOpen`. When
+reconnecting, `.onEachClose` will be called on each failed attempt.
+It also doesn't get called upon `webbs.close()`.
 
 ```js
-webbs.onclose = function report (event) {
+webbs.onEachClose = function report (event) {
   console.warn('Socket disconnected:', event)
 }
 ```
 
-### `webbs.onerror`
+### `webbs.onEachError`
 
 Initially `null`; you can assign a function. Gets called whenever an underlying
 native websocket fails to connect or loses an active connection. May happen
 multiple times.
 
 ```js
-webbs.onerror = function report (event) {
+webbs.onEachError = function report (event) {
   console.warn('Socket error:', event)
 }
 ```
 
-### `webbs.onmessage`
+### `webbs.onEachMessage`
 
 Initially `null`; you can assign a function. Gets called whenever an underlying
 native websocket receives a message.
 
 ```js
-webbs.onmessage = function report (event) {
+webbs.onEachMessage = function report (event) {
   console.info('Socket message:', event)
 }
 ```
 
+### `webbs.deinit()`
+
+Same as `.close()` but also empties the outgoing message buffer. Call this when
+disposing of the Webbs instance.
+
 ## Misc
 
-<a href="https://github.com/Mitranim/webbs" target="_blank">
-  <span>Source →</span>
-  <span class="fa fa-github"></span>
-</a>
-
-<a href="http://mitranim.com" target="_blank">
-  <span>Author →</span>
-  <span>mitranim.com</span>
-</a>
+Nelo Mitranim: https://mitranim.com

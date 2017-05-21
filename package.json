@@ -1,13 +1,11 @@
 {
   "name": "webbs",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Thin WebSocket adapter with auto-reconnect and offline buffering",
   "main": "dist/webbs.js",
   "scripts": {
     "start": "gulp",
-    "prepublish": "gulp lib:build",
-    "serve-prod": "NODE_ENV=production gulp build && NODE_ENV=production node devserver",
-    "push-docs": "NODE_ENV=production gulp build && (cd gh-pages && git add -A . && git commit -m autocommit && git push origin gh-pages)"
+    "prepublish": "gulp lib:build"
   },
   "author": "Nelo Mitranim <me@mitranim.com>",
   "license": "MIT",
@@ -17,7 +15,6 @@
   },
   "keywords": [
     "websocket",
-    "WS",
     "browser",
     "reconnect",
     "buffering"

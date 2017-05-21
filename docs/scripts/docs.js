@@ -15,19 +15,19 @@ const {Webbs} = require('webbs')
 
 const webbs = window.webbs = new Webbs('ws://localhost:7687')
 
-webbs.onopen = function onopen (event) {
+webbs.onEachOpen = function onEachOpen (event) {
   console.info('socket connected:', event)
 }
 
-webbs.onclose = function onclose (event) {
+webbs.onEachClose = function onEachClose (event) {
   console.warn('socket connection lost:', event)
 }
 
-webbs.onerror = function onerror (event) {
+webbs.onEachError = function onEachError (event) {
   console.error(event)
 }
 
-webbs.onmessage = function onmessage ({data}) {
+webbs.onEachMessage = function onEachMessage ({data}) {
   console.info('socket message:', data)
 }
 
