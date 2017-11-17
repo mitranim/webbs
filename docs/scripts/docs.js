@@ -13,6 +13,8 @@ module.hot.dispose(() => {
 
 const {Webbs} = require('webbs')
 
+window.Webbs = Webbs
+
 const webbs = window.webbs = new Webbs('ws://localhost:7687')
 
 webbs.onEachOpen = function onEachOpen (event) {

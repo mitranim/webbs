@@ -1,7 +1,4 @@
-'use strict'
-
 const {slice, reduce} = Array.prototype
-const {isFrozen} = Object
 
 /**
  * Webbs
@@ -10,8 +7,6 @@ const {isFrozen} = Object
 export class Webbs {
   constructor (url, protocol) {
     validate(isString, url)
-
-    if (this.constructor === Webbs) bindAll(this)
 
     this.url = url
 
@@ -161,11 +156,11 @@ function wsOnMessage (event) {
 class QueAsync {
   constructor (deque) {
     validate(isFunction, deque)
-    if (this.constructor === QueAsync) bindAll(this)
     this.deque = deque
     this.state = this.states.IDLE
     this.flushTimer = null
     this.pending = []
+    this.onScheduledFlush = this.onScheduledFlush.bind(this)
   }
 
   dam () {
@@ -180,11 +175,21 @@ class QueAsync {
   flush () {
     if (this.state === this.states.FLUSHING) return
     this.state = this.states.FLUSHING
-    this.flushTimer = setTimeout(this._flushNext)
+    this.flushTimer = setTimeout(this.onScheduledFlush)
   }
 
   isEmpty () {
     return !this.pending.length
+  }
+
+  onScheduledFlush () {
+    this.flushTimer = null
+    try {
+      if (this.pending.length) this.deque(this.pending.shift())
+    } finally {
+      if (this.pending.length) this.flushTimer = setTimeout(this.onScheduledFlush)
+      else this.state = this.states.IDLE
+    }
   }
 
   deinit () {
@@ -192,16 +197,6 @@ class QueAsync {
     this.flushTimer = null
     this.pending.splice(0)
     this.state = this.states.IDLE
-  }
-
-  _flushNext () {
-    this.flushTimer = null
-    try {
-      if (this.pending.length) this.deque(this.pending.shift())
-    } finally {
-      if (this.pending.length) this.flushTimer = setTimeout(this._flushNext)
-      else this.state = this.states.IDLE
-    }
   }
 }
 
@@ -218,7 +213,6 @@ QueAsync.prototype.states = {
 class TaskQueAsync extends QueAsync {
   constructor () {
     super(call)
-    if (this.constructor === TaskQueAsync) bindAll(this)
   }
 
   push (fun) {
@@ -247,26 +241,13 @@ function validateSocketPair (nativeWS) {
   }
 }
 
-function bindAll (object) {
-  for (const key in object) {
-    const value = object[key]
-    if (isFunction(value)) object[key] = value.bind(object)
-  }
-  return object
-}
-
 function assign () {
   return reduce.call(arguments, assignOne)
 }
 
 function assignOne (object, src) {
-  validate(isMutable, object)
   if (src) for (const key in src) object[key] = src[key]
   return object
-}
-
-function isMutable (value) {
-  return typeof value === 'object' && value != null && !isFrozen(value)
 }
 
 function call (fun, value) {
