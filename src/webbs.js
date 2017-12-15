@@ -58,18 +58,22 @@ export class Webbs {
 
 function webbsOpen () {
   if (isNativeWSActive(this.nativeWS)) return
-  if (this.nativeWS) webbsClearNativeWs.call(this)
+  webbsClearNativeWs.call(this)
   this.nativeWS = assign(new WebSocket(this.url, this.protocol), {
     webbs: this,
     onopen: wsOnOpen,
-    onclose: wsOnClose,
+    onclose: wsOnCloseReconnect,
     onerror: wsOnError,
     onmessage: wsOnMessage,
   })
 }
 
 function webbsClose () {
-  webbsClearNativeWs.call(this)
+  if (this.nativeWS) {
+    this.nativeWS.onclose = wsOnClose
+    this.nativeWS.close()
+    this.nativeWS = null
+  }
   webbsClearReconnect.call(this)
 }
 
@@ -117,22 +121,32 @@ function webbsClearReconnect () {
 // WebSocket addons and privates
 
 function wsOnOpen (event) {
-  validateSocketPair(this)
+  if (!this.webbs) return
   webbsClearReconnect.call(this.webbs)
   try {
     if (isFunction(this.webbs.onEachOpen)) this.webbs.onEachOpen(event)
-  } finally {
+  }
+  finally {
     webbsFlushSendBuffer.call(this.webbs)
   }
 }
 
 function wsOnClose (event) {
-  validateSocketPair(this)
+  if (!this.webbs) return
   try {
     if (isFunction(this.webbs.onEachClose)) this.webbs.onEachClose(event)
-  } finally {
+  }
+  finally {
     webbsClearNativeWs.call(this.webbs)
-    this.webbs.que.push(webbsReconnect.bind(this.webbs))
+  }
+}
+
+function wsOnCloseReconnect (event) {
+  try {
+    wsOnClose.call(this, event)
+  }
+  finally {
+    if (this.webbs) this.webbs.que.push(webbsReconnect.bind(this.webbs))
   }
 }
 
@@ -140,12 +154,12 @@ function wsOnClose (event) {
 // when native WS closes (nativeWS.readyState === nativeWS.CLOSED)
 // when native WS fails to reconnect (nativeWS.readyState === nativeWS.CONNECTING)
 function wsOnError (event) {
-  validateSocketPair(this)
+  if (!this.webbs) return
   if (isFunction(this.webbs.onEachError)) this.webbs.onEachError(event)
 }
 
 function wsOnMessage (event) {
-  validateSocketPair(this)
+  if (!this.webbs) return
   if (isFunction(this.webbs.onEachMessage)) this.webbs.onEachMessage(event)
 }
 
@@ -186,7 +200,8 @@ class QueAsync {
     this.flushTimer = null
     try {
       if (this.pending.length) this.deque(this.pending.shift())
-    } finally {
+    }
+    finally {
       if (this.pending.length) this.flushTimer = setTimeout(this.onScheduledFlush)
       else this.state = this.states.IDLE
     }
@@ -233,12 +248,6 @@ function isNativeWSActive (nativeWS) {
   return nativeWS && (
     isNativeWSOpen(nativeWS) || nativeWS.readyState === nativeWS.CONNECTING
   )
-}
-
-function validateSocketPair (nativeWS) {
-  if (nativeWS.webbs.nativeWS !== nativeWS) {
-    throw Error('Expected paired instances of WebSocket and Webbs')
-  }
 }
 
 function assign () {

@@ -1,11 +1,11 @@
 {
   "name": "webbs",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Thin WebSocket adapter with auto-reconnect and offline buffering",
   "main": "dist/webbs.js",
   "scripts": {
     "start": "gulp",
-    "prepublish": "gulp lib:build"
+    "prepublishOnly": "gulp lib:build"
   },
   "author": "Nelo Mitranim <me@mitranim.com>",
   "license": "MIT",
@@ -21,7 +21,7 @@
   ],
   "devDependencies": {
     "babel-core": "6.21.0",
-    "babel-eslint": "7.1.1",
+    "babel-eslint": "8.0.3",
     "babel-loader": "6.2.10",
     "babel-plugin-check-es2015-constants": "6.8.0",
     "babel-plugin-transform-es2015-arrow-functions": "6.8.0",
@@ -39,7 +39,7 @@
     "babel-plugin-transform-object-rest-spread": "6.20.2",
     "browser-sync": "2.18.6",
     "del": "2.2.2",
-    "eslint_d": "4.2.1",
+    "eslint_d": "4.2.5",
     "font-awesome": "4.7.0",
     "fpx": "0.0.20",
     "gulp": "gulpjs/gulp#4.0",

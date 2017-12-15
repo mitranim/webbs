@@ -1,0 +1,12 @@
+{
+  "env": {
+    "browser": true,
+    "es6": false
+  },
+  "parserOptions": {
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-invalid-this": "off"
+  }
+}

@@ -1,8 +1,8 @@
-# Commonly ignored files
-*.log
 .DS_Store
-
-# Folders
+*.log
+*.lock
+package-lock.json
+package-lock.json.*
 node_modules
 dist
 gh-pages

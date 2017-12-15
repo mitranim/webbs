@@ -19,15 +19,14 @@
 
 ## Overview
 
-Webbs is a JavaScript library, a thin abstraction over the
+Webbs is a thin abstraction over the
 <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket" target="_blank">
   `WebSocket`
 </a>
-API available in modern browsers. It provides vital features missing from
-`WebSocket`: automatic reconnect with exponential backoff, and offline
+API available in modern browsers. It provides vital missing features: automatic reconnect with exponential backoff, and offline
 buffering of outgoing messages.
 
-It's light, relatively simple, and hackable.
+Lightweight, without dependencies, relatively simple, hackable.
 
 ## Installation
 
@@ -84,7 +83,8 @@ webbs.open()
 ### `webbs.close()`
 
 Closes the active connection, if any. Stops reconnecting if a reconnect was in
-progress. Can be reopened later.
+progress. Can be reopened later. Will trigger `onEachClose` if the underlying
+websocket is open.
 
 ```js
 webbs.close()
@@ -146,8 +146,8 @@ Initially `null`; you can assign a function. Gets called whenever an underlying
 native websocket closes. May happen multiple times.
 
 Counter-intuitively, this doesn't have symmetry with `.onEachOpen`. When
-reconnecting, `.onEachClose` will be called on each failed attempt.
-It also doesn't get called upon `webbs.close()`.
+reconnecting, `.onEachClose` will be called on each failed attempt. Will be
+triggered by `webbs.close()` if the underlying websocket was open.
 
 ```js
 webbs.onEachClose = function report (event) {
