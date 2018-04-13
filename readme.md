@@ -6,10 +6,10 @@
   * [`open`](#webbsopen)
   * [`close`](#webbsclose)
   * [`send`](#webbssendmessage)
-  * [`sendJSON`](#webbssendjsonmessage)
+  * [`sendJson`](#webbssendjsonmessage)
   * [`url`](#webbsurl)
   * [`protocol`](#webbsprotocol)
-  * [`nativeWS`](#webbsnativews)
+  * [`nativeWs`](#webbsnativews)
   * [`onEachOpen`](#webbsoneachopen)
   * [`onEachClose`](#webbsoneachclose)
   * [`onEachError`](#webbsoneacherror)
@@ -19,43 +19,32 @@
 
 ## Overview
 
-Webbs is a thin abstraction over the
-<a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket" target="_blank">
-  `WebSocket`
-</a>
-API available in modern browsers. It provides vital missing features: automatic reconnect with exponential backoff, and offline
-buffering of outgoing messages.
+Webbs is a thin abstraction over the <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket" target="_blank"> `WebSocket` </a> API available in modern browsers. It provides vital missing features: automatic reconnect with exponential backoff, and offline buffering of outgoing messages.
 
-Lightweight, without dependencies, relatively simple, hackable.
+Small (≈ 170 LoC, 2.4 KiB minified), dependency-free, simple, hackable.
 
 ## Installation
 
-Webbs is meant for a CommonJS-compatible bundler, such as
-<a href="https://webpack.github.io" target="_blank">Webpack</a>
-or
-<a href="http://browserify.org/" target="_blank">browserify</a>. Install it
-from
-<a href="https://www.npmjs.com" target="_blank">NPM</a>:
+Webbs is meant for a CommonJS-compatible bundler, such as <a href="https://webpack.github.io" target="_blank">Webpack</a> or <a href="http://browserify.org/" target="_blank">browserify</a>. Install it from <a href="https://www.npmjs.com" target="_blank">NPM</a>:
 
 ```sh
-npm i --save-dev webbs
+npm i -E webbs
+# or
+yarn add -E webbs
 ```
 
 Then import:
 
 ```js
-const {Webbs} = require('webbs')
+import {Webbs} from 'webbs'
 ```
 
 ## `Webbs(url, protocol)`
 
-Takes the same arguments as the native `WebSocket` constructor (`protocol` is
-optional). Starts inert; call `.open()` to connect.
-
-All `Webbs` methods are asynchronous unless stated otherwise.
+Takes the same arguments as the native `WebSocket` constructor (`protocol` is optional). Starts inert; call `.open()` to connect.
 
 ```js
-const {Webbs} = require('webbs')
+import {Webbs} from 'webbs'
 
 const webbs = new Webbs('ws://my-host:my-port', 'optional-my-protocol')
 
@@ -72,8 +61,7 @@ webbs.open()
 
 ### `webbs.open()`
 
-Opens or reopens a connection with the current `webbs.url` and
-`webbs.protocol`. Has no effect if already connected.
+Opens or reopens a connection with the current `webbs.url` and `webbs.protocol`. Has no effect if already connected.
 
 ```js
 const webbs = new Webbs('ws://my-host:my-port', 'optional-my-protocol')
@@ -82,9 +70,9 @@ webbs.open()
 
 ### `webbs.close()`
 
-Closes the active connection, if any. Stops reconnecting if a reconnect was in
-progress. Can be reopened later. Will trigger `onEachClose` if the underlying
-websocket is open.
+Closes the active connection, if any. Stops reconnecting if a reconnect was in progress. Can be reopened later. Will trigger `onEachClose` if the underlying websocket is open.
+
+Also see [`webbs.deinit`](#webbsdeinit).
 
 ```js
 webbs.close()
@@ -94,11 +82,9 @@ webbs.open()
 
 ### `webbs.send(message)`
 
-Sends `message` as-is over the websocket, if any. The message should belong to
-one of the types accepted by `WebSocket.send` (string, binary, or blob).
+Sends `message` over the websocket, if opened. The message must be compatible with `WebSocket.prototype.send` (string or blob).
 
-If not connected, adds `message` to `webbs.sendBuffer`. When connected, will
-send all buffered messages at once.
+If not connected, adds `message` to `webbs.outgoingBuffer`. When connected, will send all buffered messages at once.
 
 ```js
 const webbs = new Webbs('ws://my-host:my-port')
@@ -111,11 +97,9 @@ webbs.send(new Blob([1, 2, 3]))
 webbs.open()
 ```
 
-### `webbs.sendJSON(message)`
+### `webbs.sendJson(message)`
 
-Same as `webbs.send(JSON.stringify(message))`. May produce a synchronous
-exception if `message` is not encodable. Feel free to override this with a
-custom function.
+Same as `webbs.send(JSON.stringify(message))`. May produce a synchronous exception if `message` is not encodable. Feel free to override this with a custom function.
 
 ### `webbs.url`
 
@@ -125,14 +109,13 @@ The `url` passed to the `Webbs` constructor. May be reassigned later.
 
 The `protocol` passed to the `Webbs` constructor. May be reassigned later.
 
-### `webbs.nativeWS`
+### `webbs.nativeWs`
 
 When connected, holds the native websocket. Otherwise `null`.
 
 ### `webbs.onEachOpen`
 
-Initially `null`; you can assign a function. Gets called whenever an underlying
-native websocket successfully connects. May happen multiple times.
+Initially `null`; you can assign a function. Gets called whenever an underlying native websocket successfully connects. May be triggered an arbitrary number of times.
 
 ```js
 webbs.onEachOpen = function report (event) {
@@ -142,12 +125,9 @@ webbs.onEachOpen = function report (event) {
 
 ### `webbs.onEachClose`
 
-Initially `null`; you can assign a function. Gets called whenever an underlying
-native websocket closes. May happen multiple times.
+Initially `null`; you can assign a function. Gets called whenever an underlying native websocket closes. May be triggered an arbitrary number of times.
 
-Counter-intuitively, this doesn't have symmetry with `.onEachOpen`. When
-reconnecting, `.onEachClose` will be called on each failed attempt. Will be
-triggered by `webbs.close()` if the underlying websocket was open.
+Counter-intuitively, this doesn't have symmetry with `.onEachOpen`. When reconnecting, `.onEachClose` will be called on each failed attempt. Triggered by `webbs.close()` if open.
 
 ```js
 webbs.onEachClose = function report (event) {
@@ -157,9 +137,7 @@ webbs.onEachClose = function report (event) {
 
 ### `webbs.onEachError`
 
-Initially `null`; you can assign a function. Gets called whenever an underlying
-native websocket fails to connect or loses an active connection. May happen
-multiple times.
+Initially `null`; you can assign a function. Gets called whenever an underlying native websocket fails to connect or loses an active connection. May be triggered an arbitrary number of times.
 
 ```js
 webbs.onEachError = function report (event) {
@@ -169,8 +147,7 @@ webbs.onEachError = function report (event) {
 
 ### `webbs.onEachMessage`
 
-Initially `null`; you can assign a function. Gets called whenever an underlying
-native websocket receives a message.
+Initially `null`; you can assign a function. Gets called whenever an underlying native websocket receives a message.
 
 ```js
 webbs.onEachMessage = function report (event) {
@@ -180,9 +157,8 @@ webbs.onEachMessage = function report (event) {
 
 ### `webbs.deinit()`
 
-Same as `.close()` but also empties the outgoing message buffer. Call this when
-disposing of the Webbs instance.
+Same as `.close()` but also empties the outgoing message buffer. Call this when disposing of the Webbs instance.
 
 ## Misc
 
-Nelo Mitranim: https://mitranim.com
+I'm receptive to suggestions. If this library _almost_ satisfies you but needs changes, open an issue or chat me up. Contacts: https://mitranim.com/#contacts

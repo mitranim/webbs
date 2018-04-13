@@ -1,69 +1,48 @@
 'use strict'
 
-const {createServer} = require('http')
-const WebSocketServer = require('websocket').server
-const {log} = require('gulp-util')
+const log = require('fancy-log')
 const repl = require('repl')
-const {append, remove} = require('fpx')
+const WS = require('ws')
 
-/**
- * Interaction
- */
+const PORT = 7687
 
-// For REPL convenience
 global.env = {
-  sockets: [],
-  broadcast (text) {
-    log(`Broadcasting to ${global.env.sockets.length} clients.`)
-    for (const socket of global.env.sockets) {
-      socket.sendUTF(text)
-    }
+  broadcast(text) {
+    log(`Broadcasting to ${server.clients.size} clients`)
+    for (const socket of server.clients) socket.send(text)
   },
-  server: null,
 }
-
-repl.start()
 
 /**
  * Server
  */
 
-const port = 7687
-
-const server = global.env.server = createServer((request, response) => {
-  log('received HTTP request')
-  // log(`Rejecting HTTP request for ${request.url}`)
-  response.writeHead(404)
-  response.end()
+const server = new WS.Server({
+  port: PORT,
 })
 
-server.listen(port, () => {
-  log(`Server listening on port ${port}`)
+server.on('listening', err => {
+  if (err) throw err
+  log(`Server listening on port ${PORT}`)
 })
 
-const wsServer = new WebSocketServer({
-  httpServer: server,
-  autoAcceptConnections: true
-})
+server.on('connection', (ws, req) => {
+  const {socket: {remoteAddress, remotePort}} = req
+  const address = `${remoteAddress}:${remotePort}`
+  log(`Incoming websocket connection from ${address}`)
 
-wsServer.on('connect', socket => {
-  log(`Accepted connection: ${socket.remoteAddress}`)
-
-  global.env.sockets = append(global.env.sockets, socket)
-
-  // msg = {type: 'utf8' | 'binary', utf8Data, binaryData}
-  socket.on('message', msg => {
-    if (msg.type === 'utf8') {
-      log(`Received message: ${msg.utf8Data}`)
-      global.env.broadcast(msg.utf8Data)
-    }
-    else if (msg.type === 'binary') {
-      log(`Received binary message of ${msg.binaryData.length} bytes.`)
-    }
+  ws.on('message', msg => {
+    log(`Received message: ${msg}`)
+    global.env.broadcast(msg)
   })
 
-  socket.on('close', (_reasonCode, _description) => {
-    global.env.sockets = remove(global.env.sockets, socket)
-    log(`Peer ${socket.remoteAddress} disconnected.`)
+  ws.on('close', (_reasonCode, _description) => {
+    log(`Peer from ${address} disconnected.`)
   })
 })
+
+/**
+ * REPL
+ */
+
+repl.start()

@@ -1,23 +1,16 @@
-const {slice, reduce} = Array.prototype
-
 /**
- * Webbs
+ * Public
  */
 
 export class Webbs {
-  constructor (url, protocol) {
-    validate(isString, url)
-
+  constructor(url, protocol) {
+    validate(url, isString)
+    validate(protocol, isStringOrUndefined)
     this.url = url
-
-    // protocol must be string or undefined:
-    // WebSocket(url, undefined)  ->  ok
-    // WebSocket(url, null)       ->  connection error
     this.protocol = protocol
 
-    this.que = new TaskQueAsync()
-    this.nativeWS = null
-    this.sendBuffer = []
+    this.nativeWs = null
+    this.outgoingBuffer = []
     this.reconnectTimer = null
     this.reconnectAttempts = 0
     this.maxReconnectInterval = 1000 * 60
@@ -27,250 +20,152 @@ export class Webbs {
     this.onEachMessage = null
   }
 
-  open () {
-    this.que.push(webbsOpen.bind(this))
+  open() {
+    if (isOpen(this.nativeWs) || isConnecting(this.nativeWs)) return
+    clearNativeWs(this)
+    const nativeWs = new WebSocket(this.url, this.protocol)
+    nativeWs.webbs = this
+    nativeWs.onopen = wsOnOpen
+    nativeWs.onclose = wsOnCloseWithReconnect
+    nativeWs.onerror = wsOnError
+    nativeWs.onmessage = wsOnMessage
+    this.nativeWs = nativeWs
   }
 
-  close () {
-    this.que.push(webbsClose.bind(this))
+  close() {
+    if (this.nativeWs) {
+      this.nativeWs.onclose = wsOnClose
+      this.nativeWs.close()
+      this.nativeWs = null
+    }
+    unscheduleReconnect(this)
   }
 
-  send (msg) {
-    this.que.push(webbsSend.bind(this, msg))
+  send(msg) {
+    this.outgoingBuffer.push(msg)
+    if (isOpen(this.nativeWs)) flushSendBuffer(this)
   }
 
-  sendJSON (msg) {
+  sendJson(msg) {
     this.send(JSON.stringify(msg))
   }
 
-  calcReconnectInterval () {
+  calcReconnectInterval() {
     return Math.min(1000 * Math.pow(2, this.reconnectAttempts), this.maxReconnectInterval)
   }
 
-  deinit () {
-    this.sendBuffer.splice(0)
-    this.que.deinit()
-    this.close()  // goes back into que
+  deinit() {
+    this.outgoingBuffer.length = 0
+    this.close()
   }
 }
 
-// Webbs privates
+/**
+ * Internal
+ */
 
-function webbsOpen () {
-  if (isNativeWSActive(this.nativeWS)) return
-  webbsClearNativeWs.call(this)
-  this.nativeWS = assign(new WebSocket(this.url, this.protocol), {
-    webbs: this,
-    onopen: wsOnOpen,
-    onclose: wsOnCloseReconnect,
-    onerror: wsOnError,
-    onmessage: wsOnMessage,
-  })
+function unscheduleReconnect(webbs) {
+  clearTimeout(webbs.reconnectTimer)
+  webbs.reconnectTimer = null
+  webbs.reconnectAttempts = 0
 }
 
-function webbsClose () {
-  if (this.nativeWS) {
-    this.nativeWS.onclose = wsOnClose
-    this.nativeWS.close()
-    this.nativeWS = null
-  }
-  webbsClearReconnect.call(this)
-}
-
-function webbsSend (msg) {
-  this.sendBuffer.push(msg)
-  if (isNativeWSOpen(this.nativeWS)) webbsFlushSendBuffer.call(this)
-}
-
-function webbsReconnect () {
-  if (!this.reconnectTimer) {
-    this.reconnectTimer = setTimeout(
-      webbsAttemptReconnect.bind(this),
-      this.calcReconnectInterval()
-    )
-    this.reconnectAttempts += 1
+function scheduleReconnect(webbs) {
+  if (!webbs.reconnectTimer) {
+    const fun = scheduledReconnect.bind(undefined, webbs)
+    const interval = webbs.calcReconnectInterval()
+    webbs.reconnectTimer = setTimeout(fun, interval)
+    webbs.reconnectAttempts += 1
   }
 }
 
-function webbsAttemptReconnect () {
-  clearTimeout(this.reconnectTimer)
-  this.reconnectTimer = null
-  this.open()
+function scheduledReconnect(webbs) {
+  clearTimeout(webbs.reconnectTimer)
+  webbs.reconnectTimer = null
+  webbs.open()
 }
 
-function webbsFlushSendBuffer () {
-  while (this.nativeWS && this.sendBuffer.length) {
-    this.nativeWS.send(this.sendBuffer.shift())
+function flushSendBuffer({nativeWs, outgoingBuffer}) {
+  while (isOpen(nativeWs) && outgoingBuffer.length) {
+    nativeWs.send(outgoingBuffer.shift())
   }
 }
 
-function webbsClearNativeWs () {
-  if (this.nativeWS) {
-    this.nativeWS.onclose = null
-    this.nativeWS.close()
-    this.nativeWS = null
+function clearNativeWs(webbs) {
+  const {nativeWs} = webbs
+  webbs.nativeWs = null
+  if (nativeWs) {
+    nativeWs.webbs = null
+    nativeWs.onclose = null
+    nativeWs.close()
   }
 }
 
-function webbsClearReconnect () {
-  clearTimeout(this.reconnectTimer)
-  this.reconnectTimer = null
-  this.reconnectAttempts = 0
-}
-
-// WebSocket addons and privates
-
-function wsOnOpen (event) {
+function wsOnOpen(event) {
   if (!this.webbs) return
-  webbsClearReconnect.call(this.webbs)
+  unscheduleReconnect(this.webbs)
   try {
     if (isFunction(this.webbs.onEachOpen)) this.webbs.onEachOpen(event)
   }
   finally {
-    webbsFlushSendBuffer.call(this.webbs)
+    flushSendBuffer(this.webbs)
   }
 }
 
-function wsOnClose (event) {
+function wsOnClose(event) {
   if (!this.webbs) return
   try {
     if (isFunction(this.webbs.onEachClose)) this.webbs.onEachClose(event)
   }
   finally {
-    webbsClearNativeWs.call(this.webbs)
+    clearNativeWs(this.webbs)
   }
 }
 
-function wsOnCloseReconnect (event) {
+function wsOnCloseWithReconnect(event) {
+  const {webbs} = this
   try {
     wsOnClose.call(this, event)
   }
   finally {
-    if (this.webbs) this.webbs.que.push(webbsReconnect.bind(this.webbs))
+    if (webbs) scheduleReconnect(webbs)
   }
 }
 
-// This fires:
-// when native WS closes (nativeWS.readyState === nativeWS.CLOSED)
-// when native WS fails to reconnect (nativeWS.readyState === nativeWS.CONNECTING)
-function wsOnError (event) {
+// Triggered when:
+//   * WS fails to open (nativeWs.readyState === nativeWs.CONNECTING)
+//   * WS closes for external reasons (nativeWs.readyState === nativeWs.CLOSED)
+// This is NOT triggered by `WebSocket.prototype.close`.
+function wsOnError(event) {
   if (!this.webbs) return
   if (isFunction(this.webbs.onEachError)) this.webbs.onEachError(event)
 }
 
-function wsOnMessage (event) {
+function wsOnMessage(event) {
   if (!this.webbs) return
   if (isFunction(this.webbs.onEachMessage)) this.webbs.onEachMessage(event)
 }
 
-/**
- * QueAsync
- */
-
-class QueAsync {
-  constructor (deque) {
-    validate(isFunction, deque)
-    this.deque = deque
-    this.state = this.states.IDLE
-    this.flushTimer = null
-    this.pending = []
-    this.onScheduledFlush = this.onScheduledFlush.bind(this)
-  }
-
-  dam () {
-    if (this.state === this.states.IDLE) this.state = this.states.DAMMED
-  }
-
-  push (value) {
-    this.pending.push(value)
-    if (this.state === this.states.IDLE) this.flush()
-  }
-
-  flush () {
-    if (this.state === this.states.FLUSHING) return
-    this.state = this.states.FLUSHING
-    this.flushTimer = setTimeout(this.onScheduledFlush)
-  }
-
-  isEmpty () {
-    return !this.pending.length
-  }
-
-  onScheduledFlush () {
-    this.flushTimer = null
-    try {
-      if (this.pending.length) this.deque(this.pending.shift())
-    }
-    finally {
-      if (this.pending.length) this.flushTimer = setTimeout(this.onScheduledFlush)
-      else this.state = this.states.IDLE
-    }
-  }
-
-  deinit () {
-    clearTimeout(this.flushTimer)
-    this.flushTimer = null
-    this.pending.splice(0)
-    this.state = this.states.IDLE
-  }
+function isOpen(nativeWs) {
+  return Boolean(nativeWs) && nativeWs.readyState === nativeWs.OPEN
 }
 
-QueAsync.prototype.states = {
-  IDLE: 'IDLE',
-  DAMMED: 'DAMMED',
-  FLUSHING: 'FLUSHING',
+function isConnecting(nativeWs) {
+  return Boolean(nativeWs) && nativeWs.readyState === nativeWs.CONNECTING
 }
 
-/**
- * TaskQueAsync
- */
-
-class TaskQueAsync extends QueAsync {
-  constructor () {
-    super(call)
-  }
-
-  push (fun) {
-    validate(isFunction, fun)
-    return super.push(fun.bind(this, ...slice.call(arguments, 1)))
-  }
-}
-
-/**
- * Utils
- */
-
-function isNativeWSOpen (nativeWS) {
-  return nativeWS && nativeWS.readyState === nativeWS.OPEN
-}
-
-function isNativeWSActive (nativeWS) {
-  return nativeWS && (
-    isNativeWSOpen(nativeWS) || nativeWS.readyState === nativeWS.CONNECTING
-  )
-}
-
-function assign () {
-  return reduce.call(arguments, assignOne)
-}
-
-function assignOne (object, src) {
-  if (src) for (const key in src) object[key] = src[key]
-  return object
-}
-
-function call (fun, value) {
-  return fun(value)
-}
-
-function isString (value) {
+function isString(value) {
   return typeof value === 'string'
 }
 
-function isFunction (value) {
+function isStringOrUndefined(value) {
+  return isString(value) || value === undefined
+}
+
+function isFunction(value) {
   return typeof value === 'function'
 }
 
-function validate (test, value) {
+function validate(value, test) {
   if (!test(value)) throw Error(`Expected ${value} to satisfy test ${test.name}`)
 }

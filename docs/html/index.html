@@ -10,13 +10,12 @@
 
 <nav class="nav-h text-larger">
   <a href="">webbs</a>
-  <a href="https://github.com/Mitranim/webbs" target="_blank" class="fa fa-github"></a>
+  <a href="https://github.com/Mitranim/webbs" target="_blank">(source)</a>
 </nav>
 
 <article>
-  {{include('readme.md')}}
+  {{md(include('readme.md'))}}
 </article>
 
-{% if (!prod) { %}
-<script src="docs.js"></script>
-{% } %}
+<script src="scripts/webbs.js"></script>
+<script src="scripts/docs.js"></script>

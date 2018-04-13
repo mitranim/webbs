@@ -1,46 +1,40 @@
-module.hot.accept(err => {
-  console.warn('Exception during HMR update.', err)
-})
-
-module.hot.dispose(() => {
-  console.clear()
-  if (webbs) webbs.close()
-})
+const {webbs} = window
 
 /**
  * Mock
  */
 
-const {Webbs} = require('webbs')
+const ws = window.ws = new webbs.Webbs('ws://localhost:7687')
 
-window.Webbs = Webbs
-
-const webbs = window.webbs = new Webbs('ws://localhost:7687')
-
-webbs.onEachOpen = function onEachOpen (event) {
+ws.onEachOpen = function onEachOpen (event) {
   console.info('socket connected:', event)
 }
 
-webbs.onEachClose = function onEachClose (event) {
+ws.onEachClose = function onEachClose (event) {
   console.warn('socket connection lost:', event)
 }
 
-webbs.onEachError = function onEachError (event) {
+ws.onEachError = function onEachError (event) {
   console.error(event)
 }
 
-webbs.onEachMessage = function onEachMessage ({data}) {
+ws.onEachMessage = function onEachMessage ({data}) {
   console.info('socket message:', data)
 }
 
-webbs.open()
+ws.open()
 
 /**
- * Debug
+ * REPL
  */
 
-;['log', 'info', 'warn', 'error', 'clear'].forEach(key => {
-  if (!/bound/.test(console[key].name)) {
-    window[key] = console[key] = console[key].bind(console)
+bind(console, 'log')
+bind(console, 'info')
+bind(console, 'warn')
+bind(console, 'info')
+
+function bind(object, method) {
+  if (!/bound/.test(object[method].name)) {
+    object[method] = object[method].bind(object)
   }
-})
+}
