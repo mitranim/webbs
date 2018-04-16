@@ -1,6 +1,6 @@
 {
   "name": "webbs",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Thin WebSocket adapter with auto-reconnect and offline buffering",
   "main": "dist/webbs.js",
   "scripts": {

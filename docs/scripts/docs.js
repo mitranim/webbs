@@ -4,25 +4,25 @@ const {webbs} = window
  * Mock
  */
 
-const ws = window.ws = new webbs.Webbs('ws://localhost:7687')
+const ws = window.ws = new webbs.Webbs()
 
-ws.onEachOpen = function onEachOpen (event) {
+ws.onEachOpen = function onEachOpen(event) {
   console.info('socket connected:', event)
 }
 
-ws.onEachClose = function onEachClose (event) {
+ws.onEachClose = function onEachClose(event) {
   console.warn('socket connection lost:', event)
 }
 
-ws.onEachError = function onEachError (event) {
+ws.onEachError = function onEachError(event) {
   console.error(event)
 }
 
-ws.onEachMessage = function onEachMessage ({data}) {
+ws.onEachMessage = function onEachMessage({data}) {
   console.info('socket message:', data)
 }
 
-ws.open()
+ws.open('ws://localhost:7687')
 
 /**
  * REPL

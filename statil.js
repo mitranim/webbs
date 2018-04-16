@@ -16,12 +16,12 @@ marked.Renderer.prototype.heading = (markup, level, rawText) => (
   `<h${level}${idAttr(genId(rawText))}>${markup}</h${level}>\n`
 )
 
-function idAttr (idValue) {
+function idAttr(idValue) {
   return idValue ? ` id="${idValue}"` : ''
 }
 
 // Translated from kramdown for compatibility with GitHub readme.
-function genId (text) {
+function genId(text) {
   return text
     .trim()
     .replace(/[^\w\d -]/g, '')

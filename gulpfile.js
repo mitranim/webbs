@@ -23,12 +23,11 @@ const srcDocStyleFiles = 'docs/styles/**/*.scss'
 const srcDocStyleMain = 'docs/styles/docs.scss'
 const srcDocScriptMain = 'docs/scripts/docs.js'
 
-const esDir = 'es'
-
+const outRootDir = 'dist'
+const outEsDir = 'es'
 const outDocDir = 'gh-pages'
 const outDocStyleDir = 'gh-pages/styles'
 const outDocScriptDir = 'gh-pages/scripts'
-const outRootDir = 'dist'
 const outEsFiles = 'es/**/*.js'
 const outDistScriptFiles = 'dist/**/*.js'
 const outMainScriptFile = require('./package').main
@@ -53,7 +52,7 @@ gulp.task('clear', () => (
 gulp.task('lib:build', () => (
   gulp.src(srcScriptFiles)
     .pipe($.babel())
-    .pipe(gulp.dest(esDir))
+    .pipe(gulp.dest(outEsDir))
     .pipe($.babel({
       plugins: [
         'transform-es2015-modules-commonjs',

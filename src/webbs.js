@@ -3,42 +3,63 @@
  */
 
 export class Webbs {
-  constructor(url, protocol) {
+  constructor() {
+    this.url = undefined
+    this.protocol = undefined
+    this.nativeWs = undefined
+    this.outgoingBuffer = []
+    this.reconnectTimer = undefined
+    this.reconnectAttempts = 0
+    this.maxReconnectInterval = 1000 * 60
+    this.onEachOpen = undefined
+    this.onEachClose = undefined
+    this.onEachError = undefined
+    this.onEachMessage = undefined
+  }
+
+  // `onEachOpen`    -> 'OPEN'
+  // `onEachMessage` -> 'OPEN'
+  // `onEachError`   -> 'CLOSED'
+  // `onEachClose`   -> 'CLOSED' | 'CONNECTING'
+  getState() {
+    return isOpen(this.nativeWs)
+      ? 'OPEN'
+      : isConnecting(this.nativeWs) || this.reconnectTimer
+      ? 'CONNECTING'
+      : 'CLOSED'
+  }
+
+  open(url, protocol) {
     validate(url, isString)
     validate(protocol, isStringOrUndefined)
+
+    if (isOpen(this.nativeWs) || isConnecting(this.nativeWs)) return
+
     this.url = url
     this.protocol = protocol
 
-    this.nativeWs = null
-    this.outgoingBuffer = []
-    this.reconnectTimer = null
-    this.reconnectAttempts = 0
-    this.maxReconnectInterval = 1000 * 60
-    this.onEachOpen = null
-    this.onEachClose = null
-    this.onEachError = null
-    this.onEachMessage = null
-  }
-
-  open() {
-    if (isOpen(this.nativeWs) || isConnecting(this.nativeWs)) return
     clearNativeWs(this)
     const nativeWs = new WebSocket(this.url, this.protocol)
+    this.nativeWs = nativeWs
     nativeWs.webbs = this
     nativeWs.onopen = wsOnOpen
     nativeWs.onclose = wsOnCloseWithReconnect
     nativeWs.onerror = wsOnError
     nativeWs.onmessage = wsOnMessage
-    this.nativeWs = nativeWs
   }
 
   close() {
+    this.outgoingBuffer.length = 0
+    unscheduleReconnect(this)
+    const wasOpen = isOpen(this.nativeWs)
     if (this.nativeWs) {
       this.nativeWs.onclose = wsOnClose
       this.nativeWs.close()
-      this.nativeWs = null
+      this.nativeWs = undefined
     }
-    unscheduleReconnect(this)
+    if (!wasOpen && isFunction(this.onEachClose)) {
+      this.onEachClose()
+    }
   }
 
   send(msg) {
@@ -46,16 +67,11 @@ export class Webbs {
     if (isOpen(this.nativeWs)) flushSendBuffer(this)
   }
 
-  sendJson(msg) {
-    this.send(JSON.stringify(msg))
-  }
-
   calcReconnectInterval() {
     return Math.min(1000 * Math.pow(2, this.reconnectAttempts), this.maxReconnectInterval)
   }
 
   deinit() {
-    this.outgoingBuffer.length = 0
     this.close()
   }
 }
@@ -66,7 +82,7 @@ export class Webbs {
 
 function unscheduleReconnect(webbs) {
   clearTimeout(webbs.reconnectTimer)
-  webbs.reconnectTimer = null
+  webbs.reconnectTimer = undefined
   webbs.reconnectAttempts = 0
 }
 
@@ -81,8 +97,8 @@ function scheduleReconnect(webbs) {
 
 function scheduledReconnect(webbs) {
   clearTimeout(webbs.reconnectTimer)
-  webbs.reconnectTimer = null
-  webbs.open()
+  webbs.reconnectTimer = undefined
+  webbs.open(webbs.url, webbs.protocol)
 }
 
 function flushSendBuffer({nativeWs, outgoingBuffer}) {
@@ -93,10 +109,10 @@ function flushSendBuffer({nativeWs, outgoingBuffer}) {
 
 function clearNativeWs(webbs) {
   const {nativeWs} = webbs
-  webbs.nativeWs = null
+  webbs.nativeWs = undefined
   if (nativeWs) {
-    nativeWs.webbs = null
-    nativeWs.onclose = null
+    nativeWs.webbs = undefined
+    nativeWs.onclose = undefined
     nativeWs.close()
   }
 }
@@ -104,32 +120,23 @@ function clearNativeWs(webbs) {
 function wsOnOpen(event) {
   if (!this.webbs) return
   unscheduleReconnect(this.webbs)
-  try {
-    if (isFunction(this.webbs.onEachOpen)) this.webbs.onEachOpen(event)
-  }
-  finally {
-    flushSendBuffer(this.webbs)
-  }
+  if (isFunction(this.webbs.onEachOpen)) this.webbs.onEachOpen(event)
+  flushSendBuffer(this.webbs)
 }
 
 function wsOnClose(event) {
-  if (!this.webbs) return
-  try {
-    if (isFunction(this.webbs.onEachClose)) this.webbs.onEachClose(event)
-  }
-  finally {
-    clearNativeWs(this.webbs)
-  }
+  const {webbs} = this
+  if (!webbs) return
+  clearNativeWs(webbs)
+  if (isFunction(webbs.onEachClose)) webbs.onEachClose(event)
 }
 
 function wsOnCloseWithReconnect(event) {
   const {webbs} = this
-  try {
-    wsOnClose.call(this, event)
-  }
-  finally {
-    if (webbs) scheduleReconnect(webbs)
-  }
+  if (!webbs) return
+  clearNativeWs(webbs)
+  scheduleReconnect(webbs)
+  if (isFunction(webbs.onEachClose)) webbs.onEachClose(event)
 }
 
 // Triggered when:
