@@ -2,78 +2,84 @@
  * Public
  */
 
-export class Webbs {
-  constructor() {
-    this.url = undefined
-    this.protocol = undefined
-    this.nativeWs = undefined
-    this.outgoingBuffer = []
-    this.reconnectTimer = undefined
-    this.reconnectAttempts = 0
-    this.maxReconnectInterval = 1000 * 60
-    this.onEachOpen = undefined
-    this.onEachClose = undefined
-    this.onEachError = undefined
-    this.onEachMessage = undefined
-  }
+export function Webbs() {
+  const self = this
+  validateInstance(this, Webbs)
+  self.url = undefined
+  self.protocol = undefined
+  self.nativeWs = undefined
+  self.outgoingBuffer = []
+  self.reconnectTimer = undefined
+  self.reconnectAttempts = 0
+  self.maxReconnectInterval = 1000 * 60
+  self.onEachOpen = undefined
+  self.onEachClose = undefined
+  self.onEachError = undefined
+  self.onEachMessage = undefined
+}
+
+Webbs.prototype = {
+  constructor: Webbs,
 
   // `onEachOpen`    -> 'OPEN'
   // `onEachMessage` -> 'OPEN'
   // `onEachError`   -> 'CLOSED'
   // `onEachClose`   -> 'CLOSED' | 'CONNECTING'
-  getState() {
+  get state() {
     return isOpen(this.nativeWs)
       ? 'OPEN'
       : isConnecting(this.nativeWs) || this.reconnectTimer
       ? 'CONNECTING'
       : 'CLOSED'
-  }
+  },
 
   open(url, protocol) {
     validate(url, isString)
     validate(protocol, isStringOrUndefined)
 
-    if (isOpen(this.nativeWs) || isConnecting(this.nativeWs)) return
+    const self = this
+    if (isOpen(self.nativeWs) || isConnecting(self.nativeWs)) return
 
-    this.url = url
-    this.protocol = protocol
+    self.url = url
+    self.protocol = protocol
 
-    clearNativeWs(this)
-    const nativeWs = new WebSocket(this.url, this.protocol)
-    this.nativeWs = nativeWs
-    nativeWs.webbs = this
+    clearNativeWs(self)
+    const nativeWs = new WebSocket(self.url, self.protocol)
+    self.nativeWs = nativeWs
+    nativeWs.webbs = self
     nativeWs.onopen = wsOnOpen
     nativeWs.onclose = wsOnCloseWithReconnect
     nativeWs.onerror = wsOnError
     nativeWs.onmessage = wsOnMessage
-  }
+  },
 
   close() {
-    this.outgoingBuffer.length = 0
-    unscheduleReconnect(this)
-    const wasOpen = isOpen(this.nativeWs)
-    if (this.nativeWs) {
-      this.nativeWs.onclose = wsOnClose
-      this.nativeWs.close()
-      this.nativeWs = undefined
+    const self = this
+    self.outgoingBuffer.length = 0
+    unscheduleReconnect(self)
+    const wasOpen = isOpen(self.nativeWs)
+    if (self.nativeWs) {
+      self.nativeWs.onclose = wsOnClose
+      self.nativeWs.close()
+      self.nativeWs = undefined
     }
-    if (!wasOpen && isFunction(this.onEachClose)) {
-      this.onEachClose()
+    if (!wasOpen && isFunction(self.onEachClose)) {
+      self.onEachClose()
     }
-  }
+  },
 
   send(msg) {
     this.outgoingBuffer.push(msg)
     if (isOpen(this.nativeWs)) flushSendBuffer(this)
-  }
+  },
 
   calcReconnectInterval() {
     return Math.min(1000 * Math.pow(2, this.reconnectAttempts), this.maxReconnectInterval)
-  }
+  },
 
   deinit() {
     this.close()
-  }
+  },
 }
 
 /**
@@ -101,7 +107,8 @@ function scheduledReconnect(webbs) {
   webbs.open(webbs.url, webbs.protocol)
 }
 
-function flushSendBuffer({nativeWs, outgoingBuffer}) {
+function flushSendBuffer(webbs) {
+  const {nativeWs, outgoingBuffer} = webbs
   while (isOpen(nativeWs) && outgoingBuffer.length) {
     nativeWs.send(outgoingBuffer.shift())
   }
@@ -175,4 +182,10 @@ function isFunction(value) {
 
 function validate(value, test) {
   if (!test(value)) throw Error(`Expected ${value} to satisfy test ${test.name}`)
+}
+
+function validateInstance(value, Class) {
+  if (!(value instanceof Class)) {
+    throw Error(`Expected ${value} to be an instance of ${Class.name}`)
+  }
 }

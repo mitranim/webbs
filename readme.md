@@ -4,7 +4,7 @@
 * [Installation](#installation)
 * [API](#api)
   * [`Webbs`](#webbs)
-    * [`.getState`](#webbsgetstate)
+    * [`.state`](#webbsstate)
     * [`.open`](#webbsopenurl-protocol)
     * [`.close`](#webbsclose)
     * [`.send`](#webbssendmessage)
@@ -20,7 +20,7 @@
 
 Webbs is a thin abstraction over the <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket" target="_blank"> `WebSocket` </a> API available in modern browsers. It provides vital missing features: automatic reconnect with exponential backoff, and offline buffering of outgoing messages.
 
-Small (≈ 180 LoC, 2.5 KiB minified), dependency-free, simple, hackable.
+Small (≈ 180 LoC, 2.4 KiB minified), dependency-free, simple, hackable.
 
 ## Installation
 
@@ -60,7 +60,7 @@ function report(event) {
 webbs.open('ws://my-host:my-port', 'optional-protocol')
 ```
 
-#### `webbs.getState()`
+#### `webbs.state`
 
 Always one of: `'CLOSED'`, `'CONNECTING'`, `'OPEN'`. Initially `'CLOSED'`.
 
@@ -151,6 +151,14 @@ webbs.onEachMessage = function report(event) {
 ```
 
 ## Changelog
+
+### 0.0.9
+
+Better minification. Slightly breaking.
+
+* use ES5-style class to avoid Babel garbage in the output
+* replaced `webbs.getState()` with the `webbs.state` getter
+* 2.6 KiB → 2.4 KiB
 
 ### 0.0.8
 
