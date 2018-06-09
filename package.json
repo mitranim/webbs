@@ -8,11 +8,11 @@
     "prepublishOnly": "gulp lib:build"
   },
   "author": "Nelo Mitranim <me@mitranim.com>",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Mitranim/webbs.git"
   },
+  "license": "WTFPL",
   "keywords": [
     "websocket",
     "browser",
