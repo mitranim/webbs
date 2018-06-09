@@ -4,7 +4,7 @@
 
 export function Webbs() {
   const self = this
-  validateInstance(this, Webbs)
+  validateInstance(self, Webbs)
   self.url = undefined
   self.protocol = undefined
   self.nativeWs = undefined
